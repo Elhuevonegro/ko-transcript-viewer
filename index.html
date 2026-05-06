@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lead Briefing — KO Pest Solutions</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f7f7f8;
+      padding: 20px;
+      line-height: 1.5;
+      color: #1f2937;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+
+    .header {
+      background: #C8102E;
+      color: white;
+      padding: 20px;
+      text-align: center;
+    }
+    .header h1 { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+    .header p  { font-size: 14px; opacity: 0.9; }
+
+    .urgency-badge {
+      display: inline-block;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      margin-top: 8px;
+      letter-spacing: 0.05em;
+    }
+    .urgency-hot  { background: #ff4444; color: white; }
+    .urgency-warm { background: #ff9933; color: white; }
+    .urgency-cool { background: #66bb6a; color: white; }
+
+    .contact-bar {
+      padding: 16px 20px;
+      background: #f9f9f9;
+      border-bottom: 1px solid #e5e5e5;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+    .contact-info { flex: 1; }
+    .contact-name { font-weight: 700; font-size: 16px; color: #1f2937; }
+    .contact-phone { font-size: 14px; color: #6b7280; margin-top: 2px; }
+
+    .call-button {
+      padding: 10px 20px;
+      background: #C8102E;
+      color: white;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 14px;
+      white-space: nowrap;
+    }
+
+    .briefing-section {
+      padding: 18px 20px;
+      border-bottom: 1px solid #e5e5e5;
+    }
+    .briefing-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: #6b7280;
+      letter-spacing: 0.05em;
+      margin-bottom: 6px;
+    }
+    .briefing-content { font-size: 14px; color: #1f2937; line-height: 1.6; }
+
+    .copy-button {
+      margin-top: 8px;
+      padding: 6px 12px;
+      background: #f3f4f6;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      color: #374151;
+      font-family: inherit;
+    }
+    .copy-button:active { background: #e5e7eb; }
+
+    .transcript { padding: 20px; }
+    .transcript-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; }
+
+    .message {
+      margin-bottom: 12px;
+      display: flex;
+      flex-direction: column;
+    }
+    .message.user { align-items: flex-end; }
+    .message-bubble {
+      max-width: 80%;
+      padding: 10px 14px;
+      border-radius: 16px;
+      font-size: 14px;
+      word-wrap: break-word;
+    }
+    .message.user .message-bubble {
+      background: #C8102E;
+      color: white;
+      border-bottom-right-radius: 4px;
+    }
+    .message.assistant .message-bubble {
+      background: #f3f4f6;
+      color: #1f2937;
+      border-bottom-left-radius: 4px;
+    }
+    .message-role {
+      font-size: 11px;
+      color: #9ca3af;
+      margin-bottom: 4px;
+      padding: 0 4px;
+    }
+
+    .loading, .error {
+      text-align: center;
+      padding: 60px 20px;
+      color: #6b7280;
+    }
+    .error { color: #ef4444; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="loading" id="loading">Loading lead briefing...</div>
+    <div id="content" style="display: none;"></div>
+    <div class="error" id="error" style="display: none;">Lead not found.</div>
+  </div>
+
+  <script>
+    // Update this when re-deploying to a fresh Apps Script URL.
+    // For Day 4 we use the test deployment (/dev) URL — only works for sessions
+    // signed in to the script owner's Google account. Day 5+ will switch to /exec.
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyXBDZrqkcXo7X6NPpYAhG_lrTNfiZQ8PsEr68ckZmclFTR654iOBYoHZ8lpA7OhDmk5g/dev';
+
+    // Extract token from URL — works for both subdomain (L.kopest.link/<token>)
+    // and path (kopest.link/L/<token> or vercel-preview.app/L/<token>)
+    const pathParts = window.location.pathname.split('/').filter(Boolean);
+    const token = pathParts[pathParts.length - 1] || '';
+
+    if (!token || token.length !== 12) {
+      showError('Invalid or missing token.');
+    } else {
+      loadLead(token);
+    }
+
+    async function loadLead(token) {
+      try {
+        const response = await fetch(APPS_SCRIPT_URL + '?token=' + encodeURIComponent(token));
+        const data = await response.json();
+
+        // Apps Script ContentService always returns 200 — check for `error` field.
+        if (data.error) {
+          showError(data.error);
+          return;
+        }
+
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('content').style.display = 'block';
+        renderLead(data);
+      } catch (err) {
+        console.error('Load error:', err);
+        showError('Could not load lead.');
+      }
+    }
+
+    function showError(msg) {
+      document.getElementById('loading').style.display = 'none';
+      const errEl = document.getElementById('error');
+      errEl.textContent = msg;
+      errEl.style.display = 'block';
+    }
+
+    function renderLead(lead) {
+      const urgencyClass = lead.urgency === 'HOT' ? 'urgency-hot'
+                         : lead.urgency === 'WARM' ? 'urgency-warm'
+                         : 'urgency-cool';
+
+      const lastName = lead.last_name ? ' ' + lead.last_name : '';
+      const householdLine = lead.household_flags
+        ? '<br>Household: ' + escapeHtml(lead.household_flags)
+        : '';
+
+      const html = `
+        <div class="header">
+          <h1>Lead Briefing</h1>
+          <p>KO Pest Solutions</p>
+          <span class="urgency-badge ${urgencyClass}">${escapeHtml(lead.urgency || '')}</span>
+        </div>
+
+        <div class="contact-bar">
+          <div class="contact-info">
+            <div class="contact-name">${escapeHtml(lead.first_name || '')}${escapeHtml(lastName)}</div>
+            <div class="contact-phone">${escapeHtml(formatPhone(lead.phone))}</div>
+          </div>
+          <a href="tel:${encodeURIComponent(lead.phone || '')}" class="call-button">CALL NOW</a>
+        </div>
+
+        <div class="briefing-section">
+          <div class="briefing-label">Pest Situation</div>
+          <div class="briefing-content">
+            <strong>${escapeHtml(lead.pest_type || '')}</strong> in ${escapeHtml(lead.location || '')}<br>
+            Severity: ${escapeHtml(lead.severity || '')}${householdLine}
+          </div>
+        </div>
+
+        <div class="briefing-section">
+          <div class="briefing-label">Psychological Read</div>
+          <div class="briefing-content">${escapeHtml(lead.psych_read || '')}</div>
+        </div>
+
+        <div class="briefing-section">
+          <div class="briefing-label">Opening Line</div>
+          <div class="briefing-content" id="opener-content">"${escapeHtml(lead.opener_suggestion || '')}"</div>
+          <button class="copy-button" onclick="copyOpener(event)">Copy Opening Line</button>
+        </div>
+
+        <div class="briefing-section">
+          <div class="briefing-label">Expected Objections</div>
+          <div class="briefing-content">${renderObjections(lead.likely_objections)}</div>
+        </div>
+
+        <div class="transcript">
+          <div class="transcript-title">Full Conversation</div>
+          ${renderTranscript(lead.full_transcript_json)}
+        </div>
+      `;
+
+      document.getElementById('content').innerHTML = html;
+    }
+
+    function formatPhone(phone) {
+      if (!phone) return '';
+      const cleaned = String(phone).replace(/\D/g, '');
+      if (cleaned.length === 10) {
+        return '(' + cleaned.slice(0,3) + ') ' + cleaned.slice(3,6) + '-' + cleaned.slice(6);
+      }
+      if (cleaned.length === 11 && cleaned[0] === '1') {
+        return '(' + cleaned.slice(1,4) + ') ' + cleaned.slice(4,7) + '-' + cleaned.slice(7);
+      }
+      return phone;
+    }
+
+    function renderObjections(objections) {
+      if (!objections || !objections.length) return 'None anticipated';
+      return objections.map(function(obj) {
+        return '<strong>"' + escapeHtml(obj.objection || '') + '"</strong> &rarr; ' +
+               escapeHtml(obj.rebuttal_angle || '');
+      }).join('<br><br>');
+    }
+
+    function renderTranscript(transcriptJson) {
+      let messages;
+      try {
+        messages = typeof transcriptJson === 'string'
+          ? JSON.parse(transcriptJson)
+          : transcriptJson;
+      } catch {
+        return '<p>Transcript unavailable</p>';
+      }
+      if (!Array.isArray(messages)) return '<p>Transcript unavailable</p>';
+
+      return messages.map(function(msg) {
+        const role = msg.role === 'user' ? 'user' : 'assistant';
+        const roleLabel = role === 'user' ? 'Customer' : 'KO Bot';
+        return `
+          <div class="message ${role}">
+            <div class="message-role">${roleLabel}</div>
+            <div class="message-bubble">${escapeHtml(msg.content || '')}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = (text == null) ? '' : String(text);
+      return div.innerHTML;
+    }
+
+    function copyOpener(evt) {
+      const opener = document.getElementById('opener-content').textContent.trim();
+      const stripped = opener.replace(/^"|"$/g, '');
+      navigator.clipboard.writeText(stripped).catch(function(err) {
+        console.error('Clipboard write failed:', err);
+      });
+      const btn = evt.currentTarget;
+      const original = btn.textContent;
+      btn.textContent = 'Copied!';
+      setTimeout(function() { btn.textContent = original; }, 2000);
+    }
+  </script>
+</body>
+</html>
