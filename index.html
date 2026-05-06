@@ -147,10 +147,10 @@
   </div>
 
   <script>
-    // Update this when re-deploying to a fresh Apps Script URL.
-    // For Day 4 we use the test deployment (/dev) URL — only works for sessions
-    // signed in to the script owner's Google account. Day 5+ will switch to /exec.
-    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyXBDZrqkcXo7X6NPpYAhG_lrTNfiZQ8PsEr68ckZmclFTR654iOBYoHZ8lpA7OhDmk5g/dev';
+    // Versioned /exec deployment with "Anyone" access — works publicly without auth.
+    // Update this constant when re-deploying. /dev URLs won't work cross-origin
+    // because they require Google session cookies.
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyny-cgpx1-eptts8Ky25qg6HN-LHFToKo5B2VMffvHhH92_qvxZFaxg0O7FFr9ToEwfQ/exec';
 
     // Extract token from URL — works for both subdomain (L.kopest.link/<token>)
     // and path (kopest.link/L/<token> or vercel-preview.app/L/<token>)
